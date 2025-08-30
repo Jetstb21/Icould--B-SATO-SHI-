@@ -4,6 +4,7 @@ import RatingModal from "@/components/RatingModal";
 import { getScores, setScore } from "@/lib/storage";
 import CategoryCard from "@/components/CategoryCard";
 import RadarChart from "@/components/RadarChart";
+import SharePanel from "@/components/SharePanel";
 
 type Category = {
   title: string;
@@ -63,6 +64,10 @@ export default function CategoriesGrid({ categories }: { categories: Category[] 
           Average score: <span className="font-semibold">{avg}</span> / 5
         </p>
         <RadarChart labels={labels} values={values} size={380} />
+      </div>
+
+      <div className="mt-8 flex justify-center">
+        <SharePanel scores={scores} labels={labels} />
       </div>
 
       <RatingModal
