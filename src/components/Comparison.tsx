@@ -191,4 +191,10 @@ export default function Comparison() {
       </div>
     </div>
   );
+    {selected.length === 0 && (
+      <div className="text-sm text-gray-500 mb-3">
+        Tip: start by selecting <strong>Satoshi</strong> to see the axes scale.
+      </div>
+    )}
+
 }
