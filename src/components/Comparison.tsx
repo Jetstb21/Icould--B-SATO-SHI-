@@ -57,6 +57,12 @@ export default function Comparison() {
     setSelected(readSharedIds());
   }, []);
 
+  useEffect(() => {
+    if (selected.length && window.location.hash.startsWith("#/c/")) {
+      history.replaceState(null, "", window.location.pathname);
+    }
+  }, [selected]);
+
   const allOptions = useMemo(() => [...BENCHMARKS, ...users], [users]);
 
   const data = useMemo(() => {
