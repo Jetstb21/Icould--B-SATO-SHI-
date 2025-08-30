@@ -12,17 +12,6 @@ export async function saveScoresCloud(scores: Record<string, number>) {
   const { error } = await supabase
     .from('user_scores')
     .upsert({
-    note: note || null
-  });
-  
-  if (error) throw error;
-}
-
-export async function getCategoryAverages() {
-  const { data, error } = await supabase.rpc("get_category_averages");
-  if (error) throw error;
-  return data as Array<{ category: string; avg_score: number; samples: number }>;
-}
       user_id: session.user.id,
       scores,
       updated_at: new Date().toISOString()
@@ -50,4 +39,27 @@ export async function loadScoresCloud(): Promise<Record<string, number>> {
   }
 
   return data?.scores || {}
+}
+
+export async function saveScoreEvent(category: string, score: number, note?: string) {
+  const session = await getSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase
+    .from('user_score_events')
+    .insert({
+      user_id: session.user.id,
+      category,
+      score,
+      note: note || null,
+      created_at: new Date().toISOString()
+    })
+
+  if (error) throw new Error(error.message)
+}
+
+export async function getCategoryAverages() {
+  const { data, error } = await supabase.rpc("get_category_averages");
+  if (error) throw new Error(error.message);
+  return data as Array<{ category: string; avg_score: number; samples: number }>;
 }
