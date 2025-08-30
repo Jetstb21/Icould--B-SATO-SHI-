@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import CategoryCard from "@/components/CategoryCard";
+import CategoryCard from "@/components/CategoryCard";
 import RatingModal from "@/components/RatingModal";
 import { getScores, setScore } from "@/lib/storage";
 
