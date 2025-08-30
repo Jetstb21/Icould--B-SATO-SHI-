@@ -1,128 +1,145 @@
-"use client";
-import React from "react";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  Radar, Legend, Tooltip, ResponsiveContainer
+} from "recharts";
 
-type RadarProps = {
-  labels: string[];
-  values: number[]; // expected 0..5
-  size?: number;    // canvas size in px
+/* ========= Config ========= */
+const METRICS = ["Cryptography","Coding","Vision","Impact","Credibility"] as const;
+type Metric = typeof METRICS[number];
+
+const BENCHMARKS: Record<string, Record<Metric, number>> = {
+  "Satoshi":                { Cryptography:10, Coding:10, Vision:10, Impact:10, Credibility:10 },
+  "Hal Finney":             { Cryptography: 9, Coding:10, Vision: 8, Impact: 9, Credibility:10 },
+  "Wei Dai":                { Cryptography: 8, Coding: 6, Vision: 9, Impact: 7, Credibility: 9 },
+  "Gavin Andresen":         { Cryptography: 6, Coding: 7, Vision: 7, Impact: 9, Credibility: 8 },
+  'Craig "Wrong" Wright':   { Cryptography: 0, Coding: 0, Vision: 1, Impact: 3, Credibility: 0 },
 };
 
-export default function RadarChart({ labels, values, size = 360 }: RadarProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+const PALETTE = ["#8884d8","#82ca9d","#ffc658","#ff7f7f","#8dd1e1","#a4de6c","#d0ed57"];
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+/* ========= Helpers ========= */
+type UserMap = Record<string, Record<Metric, number>>;
 
-    // Basic
-    const N = labels.length;
-    const cx = size / 2;
-    const cy = size / 2;
-    const radius = size * 0.38;
-    const rings = 5; // 1..5
+const LS_KEY = "radar_submissions_v1";
 
-    ctx.clearRect(0, 0, size, size);
+function toRadarRows(source: Record<string, Record<Metric, number>>) {
+  return METRICS.map((metric) => {
+    const row: any = { metric };
+    Object.entries(source).forEach(([name, vals]) => (row[name] = vals[metric]));
+    return row;
+  });
+}
 
-    // Background
-    ctx.fillStyle = "#0b0b0f";
-    ctx.fillRect(0, 0, size, size);
+function loadUsers(): UserMap {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
 
-    // Draw grid rings
-    ctx.strokeStyle = "rgba(255,255,255,0.1)";
-    ctx.lineWidth = 1;
-    for (let r = 1; r <= rings; r++) {
-      const rr = (radius * r) / rings;
-      ctx.beginPath();
-      for (let i = 0; i < N; i++) {
-        const a = (Math.PI * 2 * i) / N - Math.PI / 2;
-        const x = cx + rr * Math.cos(a);
-        const y = cy + rr * Math.sin(a);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.stroke();
-    }
+function saveUsers(users: UserMap) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(users)); } catch {}
+}
 
-    // Axes + labels
-    ctx.strokeStyle = "rgba(255,255,255,0.2)";
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
-    for (let i = 0; i < N; i++) {
-      const a = (Math.PI * 2 * i) / N - Math.PI / 2;
-      const x = cx + radius * Math.cos(a);
-      const y = cy + radius * Math.sin(a);
-      // Axis line
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      // Label
-      const lx = cx + (radius + 18) * Math.cos(a);
-      const ly = cy + (radius + 18) * Math.sin(a);
-      const label = labels[i];
-      // center-ish alignment depending on quadrant
-      const align =
-        Math.cos(a) > 0.3 ? "left" : Math.cos(a) < -0.3 ? "right" : "center";
-      ctx.textAlign = align as CanvasTextAlign;
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, lx, ly);
-    }
+/* ========= App ========= */
+export default function App() {
+  const [users, setUsers] = useState<UserMap>({});
+  const [name, setName] = useState("");
+  const [scores, setScores] = useState<Record<Metric, number>>(
+    Object.fromEntries(METRICS.map(m => [m, 5])) as Record<Metric, number>
+  );
 
-    // Data polygon
-    const max = 5;
-    const pts: Array<{ x: number; y: number }> = [];
-    for (let i = 0; i < N; i++) {
-      const v = Math.max(0, Math.min(max, values[i] ?? 0));
-      const r = (radius * v) / max;
-      const a = (Math.PI * 2 * i) / N - Math.PI / 2;
-      pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
-    }
+  // load/save localStorage
+  useEffect(() => { setUsers(loadUsers()); }, []);
+  useEffect(() => { saveUsers(users); }, [users]);
 
-    // Fill
-    ctx.beginPath();
-    pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-    ctx.closePath();
-    ctx.fillStyle = "rgba(16, 185, 129, 0.25)"; // emerald-ish
-    ctx.fill();
+  const allSeries = useMemo(() => ({ ...BENCHMARKS, ...users }), [users]);
+  const data = useMemo(() => toRadarRows(allSeries), [allSeries]);
 
-    // Stroke
-    ctx.beginPath();
-    pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-    ctx.closePath();
-    ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+  const addUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const n = name.trim();
+    if (!n) return;
+    setUsers(prev => ({ ...prev, [n]: { ...scores } }));
+    setName("");
+  };
 
-    // Center dot
-    ctx.beginPath();
-    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.fill();
-  }, [labels, values, size]);
+  const clearUsers = () => {
+    setUsers({});
+    localStorage.removeItem(LS_KEY);
+  };
 
   return (
-    <div className="inline-flex flex-col items-center gap-2">
-      <canvas ref={canvasRef} className="rounded-xl border border-white/10" />
-      <button
-        className="rounded-lg border border-white/10 px-3 py-1.5 text-sm hover:bg-white/10"
-        onClick={() => {
-          const c = canvasRef.current;
-          if (!c) return;
-          const url = c.toDataURL("image/png");
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "satoshi-skill-radar.png";
-          a.click();
-        }}
-      >
-        Download PNG
-      </button>
+    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto", fontFamily: "system-ui, Arial" }}>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Could I Be Satoshi? — Radar Compare</h1>
+      <p style={{ marginBottom: 16, opacity: 0.85 }}>
+        Benchmarks included: Satoshi, Hal Finney, Wei Dai, Gavin Andresen, Craig "Wrong" Wright.
+        Add yourself below to compare on the same chart (0–10).
+      </p>
+
+      {/* Chart */}
+      <div style={{ width: "100%", height: 440, background: "#fff", borderRadius: 16, boxShadow: "0 6px 20px rgba(0,0,0,0.07)", padding: 12, marginBottom: 18 }}>
+        <ResponsiveContainer>
+          <RadarChart data={data}>
+            <PolarGrid />
+            <PolarAngleAxis dataKey="metric" />
+            <PolarRadiusAxis angle={90} domain={[0, 10]} />
+            {/* Benchmarks (subtle gray) */}
+            {Object.keys(BENCHMARKS).map((n) => (
+              <Radar key={n} name={n} dataKey={n} stroke="#444" fill="#444" fillOpacity={0.08} />
+            ))}
+            {/* Users (colorful overlays) */}
+            {Object.keys(users).map((u, i) => (
+              <Radar
+                key={u}
+                name={u}
+                dataKey={u}
+                stroke={PALETTE[i % PALETTE.length]}
+                fill={PALETTE[i % PALETTE.length]}
+                fillOpacity={0.35}
+              />
+            ))}
+            <Tooltip />
+            <Legend />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={addUser} style={{ display: "grid", gridTemplateColumns: "1.2fr repeat(5, 1fr) auto", gap: 12, alignItems: "end" }}>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 600 }}>Display name</label>
+          <input
+            placeholder="e.g., Alice"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{ width: "100%", border: "1px solid #ddd", borderRadius: 10, padding: "10px 12px" }}
+          />
+        </div>
+        {METRICS.map((m) => (
+          <div key={m}>
+            <label style={{ fontSize: 12, fontWeight: 600 }}>{m} (0–10)</label>
+            <input
+              type="number" min={0} max={10}
+              value={scores[m]}
+              onChange={(e) =>
+                setScores((s) => ({ ...s, [m]: Math.max(0, Math.min(10, Number(e.target.value))) }))
+              }
+              style={{ width: "100%", border: "1px solid #ddd", borderRadius: 10, padding: "10px 12px" }}
+            />
+          </div>
+        ))}
+        <button type="submit" style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: "#111", color: "#fff", fontWeight: 700 }}>
+          Add
+        </button>
+      </form>
+
+      <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+        <button onClick={clearUsers} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #ddd", background: "#fafafa" }}>
+          Clear user overlays
+        </button>
+      </div>
     </div>
   );
 }
