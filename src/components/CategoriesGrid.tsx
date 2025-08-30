@@ -26,12 +26,4 @@ export async function loadScoresCloud(): Promise<Record<string, number>> {
   return (data?.scores ?? {}) as Record<string, number>;
 }
 
-export async function logScoreEvent(category: string, score: number, note?: string) {
-  const session = await getSession();
-  if (!session) throw new Error("Not signed in");
-  const user_id = session.user.id;
-  const { error } = await supabase.from("score_events")
-    .insert({ user_id, category, score, note, created_at: new Date().toISOString() });
-  if (error) throw error;
-  return true;
-}
+export default loadScoresCloud
