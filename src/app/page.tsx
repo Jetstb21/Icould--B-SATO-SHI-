@@ -1,38 +1,36 @@
-import CategoryCard from "@/components/CategoryCard";
-import {
-  Lock, Network, Coins, Code2, Users, Compass
-} from "lucide-react";
+import CategoriesGrid from "@/components/CategoriesGrid";
+import { Lock, Network, Coins, Code2, Users, Compass } from "lucide-react";
 
 const categories = [
   {
     title: "Cryptography",
-    descr: "Keys, signatures, PoW/PoS, hash functions.",
-    Icon: Lock,
+    descr: "Keys, signatures, proof-of-work, hash functions.",
+    iconNode: <Lock className="h-6 w-6" />,
   },
   {
     title: "Distributed Systems",
-    descr: "Consensus, networking, nodes, latency/faults.",
-    Icon: Network,
+    descr: "Consensus, networking, nodes, latency, fault tolerance.",
+    iconNode: <Network className="h-6 w-6" />,
   },
   {
     title: "Economics & Game Theory",
     descr: "Incentives, auctions, equilibria, fee markets.",
-    Icon: Coins,
+    iconNode: <Coins className="h-6 w-6" />,
   },
   {
     title: "Software Engineering",
     descr: "Design, testing, security, release discipline.",
-    Icon: Code2,
+    iconNode: <Code2 className="h-6 w-6" />,
   },
   {
     title: "Community & Communication",
     descr: "Docs, collaboration, leadership in public.",
-    Icon: Users,
+    iconNode: <Users className="h-6 w-6" />,
   },
   {
     title: "Vision & Product Sense",
     descr: "Problem framing, UX, long-term thinking.",
-    Icon: Compass,
+    iconNode: <Compass className="h-6 w-6" />,
   },
 ];
 
@@ -50,16 +48,7 @@ export default function Page() {
           </p>
         </header>
 
-        <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((c) => (
-            <CategoryCard 
-              key={c.title} 
-              title={c.title}
-              descr={c.descr}
-              iconNode={<c.Icon className="h-6 w-6" />}
-            />
-          ))}
-        </section>
+        <CategoriesGrid categories={categories} />
       </div>
     </main>
   );
