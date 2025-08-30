@@ -12,9 +12,7 @@ export async function saveScoresCloud(scores: Record<string, number>) {
   const user_id = session.user.id;
   const { error } = await supabase.from("user_scores")
     .upsert({ user_id, scores, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-    throw new Error('Failed to fetch leaderboard data');
-  }
-  return response.json();
+  return res.json();
   if (error) throw error;
   return true;
 }
