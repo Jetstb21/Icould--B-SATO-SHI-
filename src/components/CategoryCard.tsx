@@ -1,13 +1,13 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { type ElementType } from "react";
+import { type ReactNode } from "react";
 
 type Props = {
   title: string;
   descr: string;
-  Icon: ElementType;
+  iconNode: ReactNode;
 };
-export default function CategoryCard({ title, descr, Icon }: Props) {
+export default function CategoryCard({ title, descr, iconNode }: Props) {
   return (
     <div className={cn(
       "group relative rounded-2xl border border-white/10 bg-white/5 p-5",
@@ -15,7 +15,7 @@ export default function CategoryCard({ title, descr, Icon }: Props) {
     )}>
       <div className="flex items-start gap-4">
         <div className="rounded-xl border border-white/10 bg-white/10 p-3">
-          <Icon className="h-6 w-6" />
+          {iconNode}
         </div>
         <div>
           <h3 className="text-lg font-semibold">{title}</h3>

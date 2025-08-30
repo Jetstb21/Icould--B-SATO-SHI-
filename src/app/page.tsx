@@ -52,7 +52,12 @@ export default function Page() {
 
         <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((c) => (
-            <CategoryCard key={c.title} {...c} />
+            <CategoryCard 
+              key={c.title} 
+              title={c.title}
+              descr={c.descr}
+              iconNode={<c.Icon className="h-6 w-6" />}
+            />
           ))}
         </section>
       </div>
