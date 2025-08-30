@@ -45,9 +45,16 @@ export default function Comparison() {
       const { data } = await supabase.from("profiles").select("*");
       if (data) setUsers(data as Row[]);
     })();
+
+    // 👇 check short-link hash first
     const fromHash = readCodeFromHash();
-    if (fromHash.length) setSelected(fromHash);
-    else setSelected(readSharedIds());
+    if (fromHash.length) {
+      setSelected(fromHash);
+      return;
+    }
+
+    // fallback: ?compare=
+    setSelected(readSharedIds());
   }, []);
 
   const allOptions = useMemo(() => [...BENCHMARKS, ...users], [users]);
