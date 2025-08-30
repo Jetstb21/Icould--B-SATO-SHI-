@@ -4,14 +4,14 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { satoshiScore, type Metrics } from "@/lib/scoring";
+import { exportChecklistPdf } from "@/lib/pdfExport";
+import { BENCHMARK_BLUEPRINT } from "@/data/benchmarkBlueprint";
 import { computeGaps, type RequirementRow } from "@/lib/gaps";
 import { BENCHMARK_BLUEPRINT } from "@/data/benchmarkBlueprint";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   Radar, ResponsiveContainer, Legend, Tooltip
 } from "recharts";
-
-const METRICS = ["cryptography","distributedSystems","economics","coding","writing","community"] as const;
 
 type Row = {
   id: string; name: string; note: string | null;
