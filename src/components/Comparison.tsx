@@ -33,7 +33,9 @@ const palette = ["#82ca9d","#8884d8","#ffc658","#ff7f7f","#8dd1e1","#a4de6c","#d
 export default function Comparison() {
   const [users, setUsers] = useState<Row[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"ok" | "err" | null>(null);
+  const [codeCopied, setCodeCopied] = useState<"ok" | "err" | null>(null);
+  const [codeInput, setCodeInput] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -66,12 +68,12 @@ export default function Comparison() {
   const toggle = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter(x => x !== id) : [...s, id].slice(-3))); // max 3
 
-  const shareComparison = async () => {
+  const copyShare = async () => {
     const shareUrl = buildShareUrl(selected);
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopied("ok");
+      setTimeout(() => setCopied(null), 2000);
     } catch {
       // Fallback for older browsers
       const textarea = document.createElement('textarea');
@@ -80,9 +82,36 @@ export default function Comparison() {
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopied("ok");
+      setTimeout(() => setCopied(null), 2000);
     }
+  };
+
+  const copyShareCode = async () => {
+    const code = selected.join(",");
+    try {
+      await navigator.clipboard.writeText(code);
+      setCodeCopied("ok");
+      setTimeout(() => setCodeCopied(null), 2000);
+    } catch {
+      setCodeCopied("err");
+      setTimeout(() => setCodeCopied(null), 2000);
+    }
+  };
+
+  const loadFromCode = () => {
+    const ids = codeInput.split(",").map(s => s.trim()).filter(Boolean);
+    if (ids.length === 0) return;
+    
+    // Validate that all IDs exist in our options
+    const validIds = ids.filter(id => allOptions.some(opt => opt.id === id));
+    if (validIds.length === 0) {
+      alert("No valid IDs found in the code");
+      return;
+    }
+    
+    setSelected(validIds.slice(0, 3)); // max 3
+    setCodeInput("");
   };
 
   return (
@@ -90,6 +119,39 @@ export default function Comparison() {
       <h2 className="text-2xl font-bold mb-3">Compare Users & Benchmarks</h2>
 
       {/* Pick list */}
+      {/* Share + Code */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4 mb-3">
+        <button
+          onClick={copyShare}
+          disabled={!selected.length}
+          className={`px-3 py-2 rounded ${selected.length ? "bg-black text-white" : "bg-gray-300 text-gray-600"}`}>
+          Share link
+        </button>
+        {copied === "ok" && <span className="text-green-600 text-sm">Link copied!</span>}
+        {copied === "err" && <span className="text-red-600 text-sm">Copy failed</span>}
+
+        <button
+          onClick={copyShareCode}
+          disabled={!selected.length}
+          className={`px-3 py-2 rounded ${selected.length ? "bg-black text-white" : "bg-gray-300 text-gray-600"}`}>
+          Copy compare code
+        </button>
+        {codeCopied === "ok" && <span className="text-green-600 text-sm">Code copied!</span>}
+        {codeCopied === "err" && <span className="text-red-600 text-sm">Copy failed</span>}
+
+        <div className="flex items-center gap-2">
+          <input
+            className="border rounded px-2 py-2 w-56"
+            placeholder="Paste compare code…"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+          />
+          <button onClick={loadFromCode} className="px-3 py-2 rounded bg-black text-white">
+            Load
+          </button>
+        </div>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-3 mb-4">
         <div>
           <div className="font-semibold mb-2">Benchmarks</div>
@@ -114,18 +176,6 @@ export default function Comparison() {
           </div>
         </div>
       </div>
-
-      {/* Share button */}
-      {selected.length > 0 && (
-        <div className="mb-4 flex justify-center">
-          <button
-            onClick={shareComparison}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {copied ? "Link Copied!" : "Share This Comparison"}
-          </button>
-        </div>
-      )}
 
       {/* Chart */}
       <div className="w-full h-[440px] rounded-2xl shadow p-3 bg-white">
