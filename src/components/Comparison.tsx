@@ -45,22 +45,9 @@ export default function Comparison() {
       const { data } = await supabase.from("profiles").select("*");
       if (data) setUsers(data as Row[]);
     })();
-    
-    // Check for hash-based routing first
     const fromHash = readCodeFromHash();
     if (fromHash.length) setSelected(fromHash);
     else setSelected(readSharedIds());
-  }, []);
-
-  // Listen for hash changes to update selection
-  useEffect(() => {
-    function handleHashChange() {
-      const fromHash = readCodeFromHash();
-      if (fromHash.length) setSelected(fromHash);
-    }
-    
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const allOptions = useMemo(() => [...BENCHMARKS, ...users], [users]);
@@ -111,34 +98,25 @@ export default function Comparison() {
     <div className="p-4 max-w-6xl mx-auto">
       <h2 className="text-2xl font-bold mb-3">Compare Users & Benchmarks</h2>
 
-      {/* Share + Code */}
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4 mb-3">
-        <button
-          onClick={copyShare}
-          disabled={!selected.length}
+      {/* Share controls */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button onClick={copyShare} disabled={!selected.length}
           className={`px-3 py-2 rounded ${selected.length ? "bg-black text-white" : "bg-gray-300 text-gray-600"}`}>
           Share link
         </button>
-        {copied === "ok" && <span className="text-green-600 text-sm">Link copied!</span>}
-        {copied === "err" && <span className="text-red-600 text-sm">Copy failed</span>}
+        {copied==="ok" && <span className="text-green-600 text-sm">Link copied!</span>}
 
-        <button
-          onClick={copyShort}
-          disabled={!selected.length}
+        <button onClick={copyShort} disabled={!selected.length}
           className={`px-3 py-2 rounded ${selected.length ? "bg-black text-white" : "bg-gray-300 text-gray-600"}`}>
           Copy short link
         </button>
-        {shortCopied === "ok" && <span className="text-green-600 text-sm">Short link copied!</span>}
-        {shortCopied === "err" && <span className="text-red-600 text-sm">Copy failed</span>}
+        {shortCopied==="ok" && <span className="text-green-600 text-sm">Short link copied!</span>}
 
-        <button
-          onClick={copyCode}
-          disabled={!selected.length}
+        <button onClick={copyCode} disabled={!selected.length}
           className={`px-3 py-2 rounded ${selected.length ? "bg-black text-white" : "bg-gray-300 text-gray-600"}`}>
           Copy code
         </button>
-        {codeCopied === "ok" && <span className="text-green-600 text-sm">Code copied!</span>}
-        {codeCopied === "err" && <span className="text-red-600 text-sm">Copy failed</span>}
+        {codeCopied==="ok" && <span className="text-green-600 text-sm">Code copied!</span>}
 
         <div className="flex items-center gap-2">
           <input
@@ -147,9 +125,7 @@ export default function Comparison() {
             value={codeInput}
             onChange={(e) => setCodeInput(e.target.value)}
           />
-          <button onClick={loadFromCode} className="px-3 py-2 rounded bg-black text-white">
-            Load
-          </button>
+          <button onClick={loadFromCode} className="px-3 py-2 rounded bg-black text-white">Load</button>
         </div>
       </div>
 
@@ -199,7 +175,6 @@ export default function Comparison() {
           </RadarChart>
         </ResponsiveContainer>
       </div>
-      <div className="text-sm text-gray-600 mt-2">Select up to 3 items at a time.</div>
     </div>
   );
 }
