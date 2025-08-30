@@ -6,7 +6,11 @@ import {
   Radar, Legend, Tooltip, ResponsiveContainer
 } from "recharts";
 import { supabase } from "@/lib/supabase";
-import { buildShareUrl, readSharedIds } from "@/lib/shareComparison";
+import {
+  buildShareUrl, readSharedIds,
+  toCompareCode, fromCompareCode,
+  buildShortLink, readCodeFromHash
+} from "@/lib/share";
 
 const METRICS = ["cryptography","distributedSystems","economics","coding","writing","community"] as const;
 type Metric = typeof METRICS[number];
@@ -18,16 +22,11 @@ type Row = {
 };
 
 const BENCHMARKS: Row[] = [
-  { id: "bm-satoshi", name: "Satoshi",
-    cryptography:10, distributedSystems:10, economics:10, coding:10, writing:10, community:7 },
-  { id: "bm-hal", name: "Hal Finney",
-    cryptography:9, distributedSystems:8, economics:7, coding:10, writing:8, community:9 },
-  { id: "bm-wei", name: "Wei Dai",
-    cryptography:8, distributedSystems:7, economics:7, coding:6, writing:8, community:7 },
-  { id: "bm-gavin", name: "Gavin Andresen",
-    cryptography:6, distributedSystems:7, economics:7, coding:7, writing:6, community:9 },
-  { id: "bm-craig", name: "Craig \"Wrong\" Wright",
-    cryptography:0, distributedSystems:0, economics:1, coding:0, writing:1, community:3 },
+  { id: "bm-satoshi", name: "Satoshi", cryptography:10, distributedSystems:10, economics:10, coding:10, writing:10, community:7 },
+  { id: "bm-hal", name: "Hal Finney", cryptography:9, distributedSystems:8, economics:7, coding:10, writing:8, community:9 },
+  { id: "bm-wei", name: "Wei Dai", cryptography:8, distributedSystems:7, economics:7, coding:6, writing:8, community:7 },
+  { id: "bm-gavin", name: "Gavin Andresen", cryptography:6, distributedSystems:7, economics:7, coding:7, writing:6, community:9 },
+  { id: "bm-craig", name: "Craig \"Wrong\" Wright", cryptography:0, distributedSystems:0, economics:1, coding:0, writing:1, community:3 },
 ];
 
 const palette = ["#82ca9d","#8884d8","#ffc658","#ff7f7f","#8dd1e1","#a4de6c","#d0ed57"];
@@ -35,23 +34,20 @@ const palette = ["#82ca9d","#8884d8","#ffc658","#ff7f7f","#8dd1e1","#a4de6c","#d
 export default function Comparison() {
   const [users, setUsers] = useState<Row[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [copied, setCopied] = useState<"ok" | "err" | null>(null);
-  const [codeCopied, setCodeCopied] = useState<"ok" | "err" | null>(null);
+  const [copied, setCopied] = useState<null | "ok" | "err">(null);
+  const [shortCopied, setShortCopied] = useState<null | "ok" | "err">(null);
+  const [codeCopied, setCodeCopied] = useState<null | "ok" | "err">(null);
   const [codeInput, setCodeInput] = useState("");
 
+  // Load users + hash/query selection
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from("profiles").select("*");
-      if (!error && data) setUsers(data as Row[]);
+      const { data } = await supabase.from("profiles").select("*");
+      if (data) setUsers(data as Row[]);
     })();
-  }, []);
-
-  // Load shared selection from URL on mount
-  useEffect(() => {
-    const sharedIds = readSharedIds();
-    if (sharedIds.length > 0) {
-      setSelected(sharedIds.slice(0, 3)); // respect max 3 limit
-    }
+    const fromHash = readCodeFromHash();
+    if (fromHash.length) setSelected(fromHash);
+    else setSelected(readSharedIds());
   }, []);
 
   const allOptions = useMemo(() => [...BENCHMARKS, ...users], [users]);
@@ -68,59 +64,40 @@ export default function Comparison() {
   }, [selected, allOptions]);
 
   const toggle = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter(x => x !== id) : [...s, id].slice(-3))); // max 3
+    setSelected((s) => (s.includes(id) ? s.filter(x => x !== id) : [...s, id].slice(-3)));
 
-  const copyShare = async () => {
-    const shareUrl = buildShareUrl(selected);
+  async function copyShare() {
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied("ok");
-      setTimeout(() => setCopied(null), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = shareUrl;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setCopied("ok");
-      setTimeout(() => setCopied(null), 2000);
-    }
-  };
-
-  const copyShareCode = async () => {
-    const code = selected.join(",");
+      const link = buildShareUrl(selected);
+      await navigator.clipboard.writeText(link);
+      setCopied("ok"); setTimeout(() => setCopied(null), 1500);
+    } catch { setCopied("err"); setTimeout(() => setCopied(null), 2000); }
+  }
+  async function copyShort() {
     try {
+      const link = buildShortLink(selected);
+      await navigator.clipboard.writeText(link);
+      setShortCopied("ok"); setTimeout(() => setShortCopied(null), 1500);
+    } catch { setShortCopied("err"); setTimeout(() => setShortCopied(null), 2000); }
+  }
+  async function copyCode() {
+    try {
+      const code = toCompareCode(selected);
       await navigator.clipboard.writeText(code);
-      setCodeCopied("ok");
-      setTimeout(() => setCodeCopied(null), 2000);
-    } catch {
-      setCodeCopied("err");
-      setTimeout(() => setCodeCopied(null), 2000);
-    }
-  };
-
-  const loadFromCode = () => {
-    const ids = codeInput.split(",").map(s => s.trim()).filter(Boolean);
-    if (ids.length === 0) return;
-    
-    // Validate that all IDs exist in our options
-    const validIds = ids.filter(id => allOptions.some(opt => opt.id === id));
-    if (validIds.length === 0) {
-      alert("No valid IDs found in the code");
-      return;
-    }
-    
-    setSelected(validIds.slice(0, 3)); // max 3
-    setCodeInput("");
-  };
+      setCodeCopied("ok"); setTimeout(() => setCodeCopied(null), 1500);
+    } catch { setCodeCopied("err"); setTimeout(() => setCodeCopied(null), 2000); }
+  }
+  function loadFromCode() {
+    const ids = fromCompareCode(codeInput.trim());
+    if (!ids.length) return;
+    const valid = ids.filter(id => id.startsWith("bm-") || users.some(u => u.id === id)).slice(0,3);
+    setSelected(valid);
+  }
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h2 className="text-2xl font-bold mb-3">Compare Users & Benchmarks</h2>
 
-      {/* Pick list */}
       {/* Share + Code */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4 mb-3">
         <button
@@ -133,10 +110,19 @@ export default function Comparison() {
         {copied === "err" && <span className="text-red-600 text-sm">Copy failed</span>}
 
         <button
-          onClick={copyShareCode}
+          onClick={copyShort}
           disabled={!selected.length}
           className={`px-3 py-2 rounded ${selected.length ? "bg-black text-white" : "bg-gray-300 text-gray-600"}`}>
-          Copy compare code
+          Copy short link
+        </button>
+        {shortCopied === "ok" && <span className="text-green-600 text-sm">Short link copied!</span>}
+        {shortCopied === "err" && <span className="text-red-600 text-sm">Copy failed</span>}
+
+        <button
+          onClick={copyCode}
+          disabled={!selected.length}
+          className={`px-3 py-2 rounded ${selected.length ? "bg-black text-white" : "bg-gray-300 text-gray-600"}`}>
+          Copy code
         </button>
         {codeCopied === "ok" && <span className="text-green-600 text-sm">Code copied!</span>}
         {codeCopied === "err" && <span className="text-red-600 text-sm">Copy failed</span>}
@@ -154,6 +140,7 @@ export default function Comparison() {
         </div>
       </div>
 
+      {/* Pickers */}
       <div className="grid md:grid-cols-2 gap-3 mb-4">
         <div>
           <div className="font-semibold mb-2">Benchmarks</div>
@@ -192,8 +179,7 @@ export default function Comparison() {
               return (
                 <Radar key={id} name={r.name} dataKey={r.name}
                   stroke={palette[i % palette.length]}
-                  fill={palette[i % palette.length]}
-                  fillOpacity={0.35}/>
+                  fill={palette[i % palette.length]} fillOpacity={0.35}/>
               );
             })}
             <Tooltip /><Legend />
