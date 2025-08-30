@@ -21,6 +21,7 @@ export default function CategoryCard({ title, descr, iconNode, score = 0, onAsse
       <div className="flex items-start gap-4">
         <div className="rounded-xl border border-white/10 bg-white/10 p-3">
           {iconNode}
+        </div>
         <div className="min-w-0">
           <h3 className="truncate text-lg font-semibold">{title}</h3>
           <p className="text-sm text-white/70">{descr}</p>
@@ -38,6 +39,3 @@ export default function CategoryCard({ title, descr, iconNode, score = 0, onAsse
       </button>
     </div>
   );
-}
-  )
-}
