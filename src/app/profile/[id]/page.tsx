@@ -8,6 +8,7 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   Radar, ResponsiveContainer, Legend, Tooltip
 } from "recharts";
+import GapChecklist from "@/components/GapChecklist";
 import { toCompareCode } from "@/lib/share";
 
 const METRICS = ["cryptography","distributedSystems","economics","coding","writing","community"] as const;
@@ -146,6 +147,21 @@ export default function ProfilePage() {
             <Legend /><Tooltip />
           </RadarChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Gap Analysis */}
+      <div className="mt-8">
+        <GapChecklist
+          benchmark="Satoshi"
+          userScores={{
+            cryptography: row.cryptography,
+            coding: row.coding,
+            writing: row.writing,
+            distributedSystems: row.distributedSystems,
+            economics: row.economics,
+            community: row.community
+          }}
+        />
       </div>
     </div>
   );
