@@ -133,6 +133,7 @@ export default function Comparison() {
 
         <div className="flex items-center gap-2">
           <input
+            autoFocus={selected.length === 0}
             className="border rounded px-2 py-2 w-56"
             placeholder="Paste compare code…"
             value={codeInput}
