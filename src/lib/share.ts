@@ -29,20 +29,11 @@ export function buildShortLink(ids: string[]): string {
 }
 
 export function readCodeFromHash(): string[] {
+  if (typeof window === "undefined") return [];
   const hash = window.location.hash;
-  // Check for new format: #/c/abc123
-  const match = hash.match(/^#\/c\/(.+)$/);
-  if (match) {
-    try {
-      const decoded = atob(match[1]);
-      return decoded.split(",").filter(Boolean);
-    } catch {
-      return [];
-    }
-  }
-  // Fallback to old format: #id1,id2,id3
-  const oldFormat = hash.slice(1);
-  return oldFormat ? oldFormat.split(",").filter(Boolean) : [];
+  const m = hash.match(/#\/c\/([A-Za-z0-9\-_]+)/);
+  if (m) return fromCompareCode(m[1]);
+  return [];
 }
 
 // Original score sharing utilities
