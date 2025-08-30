@@ -4,12 +4,12 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { satoshiScore, type Metrics } from "@/lib/scoring";
+import { computeGaps, type RequirementRow } from "@/lib/gaps";
+import { BENCHMARK_BLUEPRINT } from "@/data/benchmarkBlueprint";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   Radar, ResponsiveContainer, Legend, Tooltip
 } from "recharts";
-import GapChecklist from "@/components/GapChecklist";
-import { toCompareCode } from "@/lib/share";
 
 const METRICS = ["cryptography","distributedSystems","economics","coding","writing","community"] as const;
 
@@ -149,20 +149,116 @@ export default function ProfilePage() {
         </ResponsiveContainer>
       </div>
 
-      {/* Gap Analysis */}
-      <div className="mt-8">
-        <GapChecklist
-          benchmark="Satoshi"
-          userScores={{
-            cryptography: row.cryptography,
-            coding: row.coding,
-            writing: row.writing,
-            distributedSystems: row.distributedSystems,
-            economics: row.economics,
-            community: row.community
-          }}
-        />
+      {/* Gap Checklist */}
+      <GapChecklistSection 
+        userScores={{
+          cryptography: row.cryptography,
+          coding: row.coding,
+          writing: row.writing,
+          distributedSystems: row.distributedSystems,
+          economics: row.economics,
+          community: row.community
+        }}
+      />
+
+      {/* Qualifications Accordion */}
+      <div className="rounded-2xl border bg-white p-4">
+        <h3 className="text-lg font-bold mb-2">Detailed Qualifications</h3>
+        {Object.entries(BENCHMARK_BLUEPRINT).map(([bench, metrics]) => (
+          <details key={bench} className="mb-2">
+            <summary className="cursor-pointer font-semibold">{bench}</summary>
+            <ul className="ml-5 mt-1 list-disc space-y-1">
+              {Object.entries(metrics as any).map(([m, tasks]) => (
+                <li key={m}>
+                  <span className="font-medium">{m}:</span>{" "}
+                  {(tasks as string[]).join("; ")}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ))}
       </div>
+    </div>
+  );
+}
+
+function GapChecklistSection({ userScores }: { userScores: Record<string, number> }) {
+  const [requirements, setRequirements] = useState<RequirementRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("benchmark_requirements")
+          .select("*")
+          .eq("benchmark", "Satoshi");
+        
+        if (error) throw error;
+        if (data) setRequirements(data as RequirementRow[]);
+      } catch (error) {
+        console.error("Failed to load requirements:", error);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading) return <div className="p-4 text-gray-600">Loading requirements…</div>;
+
+  const gaps = computeGaps(userScores, requirements);
+
+  if (!requirements.length) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+        <div className="text-gray-600">No requirements found for Satoshi</div>
+      </div>
+    );
+  }
+
+  if (!gaps.length) {
+    return (
+      <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+        <div className="text-green-800 font-medium">
+          🎉 You already meet all Satoshi requirements—excellent work!
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <h3 className="text-lg font-bold mb-4 text-gray-900">
+        To reach Satoshi level
+      </h3>
+      <div className="text-sm text-gray-600 mb-4">
+        {gaps.length} requirement{gaps.length === 1 ? '' : 's'} to complete
+      </div>
+      
+      <ul className="space-y-4">
+        {gaps.map(g => (
+          <li key={g.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+            <input 
+              type="checkbox" 
+              className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+            />
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-gray-900 mb-1">
+                <span className="capitalize">{g.metric}</span> — need +{g.delta} points
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  (you: {g.userHas}/10 → target: {g.neededToReach}/10)
+                </span>
+              </div>
+              <div className="text-gray-700 mb-2">{g.detail}</div>
+              {g.evidence && (
+                <div className="text-sm text-gray-500">
+                  <span className="font-medium">Evidence needed:</span> {g.evidence}
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
