@@ -1,5 +1,11 @@
 "use client";
-import { supabase } from "@/lib/supabase";
+
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function getSession() {
   const { data } = await supabase.auth.getSession();
@@ -54,7 +60,7 @@ export async function fetchMyHistory(limit = 50): Promise<ScoreEvent[]> {
 /** ⬇️ New: leaderboard aggregates (anonymous) */
 export type CatAvg = { category: string; avg_score: number; samples: number };
 export async function fetchCategoryAverages(): Promise<CatAvg[]> {
-  const { data, error } = await supabase.rpc("get_category_averages");
-  if (error) throw error;
-  return data ?? [];
+  const res = await fetch("/api/averages", { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load leaderboard");
+  return res.json();
 }
