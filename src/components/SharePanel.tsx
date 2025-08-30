@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { encodeScores } from "@/lib/share";
 
 type SharePanelProps = {
@@ -10,13 +10,18 @@ type SharePanelProps = {
 
 export default function SharePanel({ scores, labels }: SharePanelProps) {
   const [copied, setCopied] = useState(false);
+  const [link, setLink] = useState("");
 
-  const link = useMemo(() => {
-    // Build absolute URL to /share with compact payload
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const encodedData = useMemo(() => {
     const d = encodeScores(scores);
-    return `${origin}/share?d=${d}`;
+    return d;
   }, [scores]);
+
+  useEffect(() => {
+    // Build absolute URL to /share with compact payload (client-side only)
+    const origin = window.location.origin;
+    setLink(`${origin}/share?d=${encodedData}`);
+  }, [encodedData]);
 
   async function copy() {
     try {
