@@ -1,69 +1,63 @@
 "use client";
+import { supabase } from "@/lib/supabase";
 
-import { useEffect, useState } from "react";
-import { fetchCategoryAverages, type CatAvg } from "@/lib/cloud";
+export async function getSession() {
+  const { data } = await supabase.auth.getSession();
+  return data.session ?? null;
+}
 
-export default function LeaderboardPage() {
-  const [rows, setRows] = useState<CatAvg[]>([]);
-  const [busy, setBusy] = useState(false);
-
-  async function load() {
-    try {
-      setBusy(true);
-      const data = await fetchCategoryAverages();
-      setRows(data);
-    } catch (e:any) {
-      alert(e.message || "Failed to load leaderboard");
-    } finally {
-      setBusy(false);
-    }
+export async function saveScoresCloud(scores: Record<string, number>) {
+  const session = await getSession();
+  if (!session) throw new Error("Not signed in");
+  const user_id = session.user.id;
+  const { error } = await supabase.from("user_scores")
+    .upsert({ user_id, scores, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    throw new Error('Failed to fetch leaderboard data');
   }
+  return response.json();
+  if (error) throw error;
+  return true;
+}
 
-  useEffect(() => { load(); }, []);
+export async function loadScoresCloud(): Promise<Record<string, number>> {
+  const session = await getSession();
+  if (!session) throw new Error("Not signed in");
+  const user_id = session.user.id;
+  const { data, error } = await supabase.from("user_scores")
+    .select("scores").eq("user_id", user_id).maybeSingle();
+  if (error) throw error;
+  return (data?.scores ?? {}) as Record<string, number>;
+}
 
-  return (
-    <main className="min-h-dvh bg-gradient-to-b from-slate-900 to-black text-white">
-      <div className="mx-auto max-w-3xl px-6 py-12">
-        <header className="mb-6 flex items-center gap-3">
-          <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">
-            Category Leaderboard (Anonymous Averages)
-          </h1>
-          <button
-            className="ml-auto rounded-lg border border-white/10 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-50"
-            onClick={load}
-            disabled={busy}
-          >
-            {busy ? "Refreshing..." : "Refresh"}
-          </button>
-        </header>
+/** ⬇️ New: append a score event (with optional note) */
+export async function logScoreEvent(category: string, score: number, note?: string) {
+  const session = await getSession();
+  if (!session) return; // silently ignore if not signed in
+  const user_id = session.user.id;
+  const { error } = await supabase.from("user_score_events").insert({ user_id, category, score, note });
+  if (error) throw error;
+}
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-          <table className="w-full text-sm">
-            <thead className="bg-white/5">
-              <tr>
-                <th className="px-4 py-3 text-left">Category</th>
-                <th className="px-4 py-3 text-right">Average</th>
-                <th className="px-4 py-3 text-right">Samples</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr><td colSpan={3} className="px-4 py-4 text-center text-white/60">No data yet.</td></tr>
-              ) : rows.map((r) => (
-                <tr key={r.category} className="border-t border-white/5">
-                  <td className="px-4 py-3">{r.category}</td>
-                  <td className="px-4 py-3 text-right font-semibold">{Number(r.avg_score).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right">{r.samples}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+/** ⬇️ New: fetch own history (latest first) */
+export type ScoreEvent = { id: number; category: string; score: number; note: string | null; created_at: string; };
+export async function fetchMyHistory(limit = 50): Promise<ScoreEvent[]> {
+  const session = await getSession();
+  if (!session) throw new Error("Not signed in");
+  const user_id = session.user.id;
+  const { data, error } = await supabase
+    .from("user_score_events")
+    .select("id, category, score, note, created_at")
+    .eq("user_id", user_id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
 
-        <p className="mt-3 text-center text-xs text-white/60">
-          Averages are computed from all users' score events, no identities shared.
-        </p>
-      </div>
-    </main>
-  );
+/** ⬇️ New: leaderboard aggregates (anonymous) */
+export type CatAvg = { category: string; avg_score: number; samples: number };
+export async function fetchCategoryAverages(): Promise<CatAvg[]> {
+  const { data, error } = await supabase.rpc("get_category_averages");
+  if (error) throw error;
+  return data ?? [];
 }
