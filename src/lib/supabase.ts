@@ -1,12 +1,6 @@
-import { supabase } from './supabase'
+import { createClient } from '@supabase/supabase-js'
 
-export async function getSession() {
-  const { data: { session } } = await supabase.auth.getSession()
-  return session
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export async function saveScoresCloud(scores: Record<string, number>) {
-  const session = await getSession()
-  if (!session) throw new Error('Not signed in')
-
-  const { error } = await supabase
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)

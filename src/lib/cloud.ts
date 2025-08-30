@@ -1,42 +1,27 @@
-import { supabase } from './supabase'
+"use client";
+import { supabase } from "@/lib/supabase";
 
 export async function getSession() {
-  const { data: { session } } = await supabase.auth.getSession()
-  return session
+  const { data } = await supabase.auth.getSession();
+  return data.session ?? null;
 }
 
 export async function saveScoresCloud(scores: Record<string, number>) {
-  const session = await getSession()
-  if (!session) throw new Error('Not signed in')
-
-  const { error } = await supabase
-    .from('user_scores')
-    .upsert({
-      user_id: session.user.id,
-      scores,
-      updated_at: new Date().toISOString()
-    })
-
-  if (error) throw new Error(error.message)
+  const session = await getSession();
+  if (!session) throw new Error("Not signed in");
+  const user_id = session.user.id;
+  const { error } = await supabase.from("user_scores")
+    .upsert({ user_id, scores, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+  if (error) throw error;
+  return true;
 }
 
 export async function loadScoresCloud(): Promise<Record<string, number>> {
-  const session = await getSession()
-  if (!session) throw new Error('Not signed in')
-
-  const { data, error } = await supabase
-    .from('user_scores')
-    .select('scores')
-    .eq('user_id', session.user.id)
-    .single()
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      // No data found, return empty scores
-      return {}
-    }
-    throw new Error(error.message)
-  }
-
-  return data?.scores || {}
+  const session = await getSession();
+  if (!session) throw new Error("Not signed in");
+  const user_id = session.user.id;
+  const { data, error } = await supabase.from("user_scores")
+    .select("scores").eq("user_id", user_id).maybeSingle();
+  if (error) throw error;
+  return (data?.scores ?? {}) as Record<string, number>;
 }
