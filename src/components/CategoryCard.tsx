@@ -39,3 +39,5 @@ export default function CategoryCard({ title, descr, iconNode, score = 0, onAsse
     </div>
   );
 }
+  )
+}
