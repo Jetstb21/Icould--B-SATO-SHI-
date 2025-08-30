@@ -4,15 +4,14 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { satoshiScore, type Metrics } from "@/lib/scoring";
+import { exportChecklistPdf } from "@/lib/pdfExport";
+import { BENCHMARK_BLUEPRINT } from "@/data/benchmarkBlueprint";
 import { computeGaps, type RequirementRow } from "@/lib/gaps";
 import { BENCHMARK_BLUEPRINT } from "@/data/benchmarkBlueprint";
-import { exportChecklistPdf } from "@/lib/pdfExport";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   Radar, ResponsiveContainer, Legend, Tooltip
 } from "recharts";
-
-const METRICS = ["cryptography","distributedSystems","economics","coding","writing","community"] as const;
 
 type Row = {
   id: string; name: string; note: string | null;
@@ -100,6 +99,12 @@ export default function ProfilePage() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => exportChecklistPdf(row.name, score, gaps, BENCHMARK_BLUEPRINT)}
+            className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
+          >
+            Download PDF Checklist
+          </button>
+          <button
             onClick={copyCompareShortLink}
             className="px-3 py-2 rounded bg-black text-white hover:bg-gray-800 transition-colors"
             title="Copies a short link to compare this profile with selected benchmarks"
@@ -160,8 +165,6 @@ export default function ProfilePage() {
           economics: row.economics,
           community: row.community
         }}
-        profileName={row.name}
-        score={score}
       />
 
       {/* Qualifications Accordion */}
@@ -185,11 +188,7 @@ export default function ProfilePage() {
   );
 }
 
-function GapChecklistSection({ userScores, profileName, score }: { 
-  userScores: Record<string, number>;
-  profileName: string;
-  score: number;
-}) {
+function GapChecklistSection({ userScores }: { userScores: Record<string, number> }) {
   const [requirements, setRequirements] = useState<RequirementRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -215,10 +214,6 @@ function GapChecklistSection({ userScores, profileName, score }: {
 
   const gaps = computeGaps(userScores, requirements);
 
-  function handleExportPdf() {
-    exportChecklistPdf(profileName || "Anonymous", score, gaps, BENCHMARK_BLUEPRINT);
-  }
-
   if (!requirements.length) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -230,16 +225,8 @@ function GapChecklistSection({ userScores, profileName, score }: {
   if (!gaps.length) {
     return (
       <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="text-green-800 font-medium">
-            🎉 You already meet all Satoshi requirements—excellent work!
-          </div>
-          <button
-            onClick={handleExportPdf}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Export PDF Report
-          </button>
+        <div className="text-green-800 font-medium">
+          🎉 You already meet all Satoshi requirements—excellent work!
         </div>
       </div>
     );
@@ -247,21 +234,11 @@ function GapChecklistSection({ userScores, profileName, score }: {
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900">
-            To reach Satoshi level
-          </h3>
-          <div className="text-sm text-gray-600">
-            {gaps.length} requirement{gaps.length === 1 ? '' : 's'} to complete
-          </div>
-        </div>
-        <button
-          onClick={handleExportPdf}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
-          Export PDF Report
-        </button>
+      <h3 className="text-lg font-bold mb-4 text-gray-900">
+        To reach Satoshi level
+      </h3>
+      <div className="text-sm text-gray-600 mb-4">
+        {gaps.length} requirement{gaps.length === 1 ? '' : 's'} to complete
       </div>
       
       <ul className="space-y-4">
