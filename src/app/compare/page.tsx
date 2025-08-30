@@ -1,9 +1,7 @@
-import Comparison from "@/components/Comparison";
+import dynamic from "next/dynamic";
 
-export default function ComparePage() {
-  return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-900 to-black text-white">
-      <Comparison />
-    </main>
-  );
+const Comparison = dynamic(() => import("@/components/Comparison"), { ssr: false });
+
+export default function Page() {
+  return <Comparison />;
 }
