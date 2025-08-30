@@ -24,7 +24,7 @@ const BENCHMARKS: Row[] = [
     cryptography:8, distributedSystems:7, economics:7, coding:6, writing:8, community:7 },
   { id: "bm-gavin", name: "Gavin Andresen",
     cryptography:6, distributedSystems:7, economics:7, coding:7, writing:6, community:9 },
-  { id: "bm-craig", name: "Craig \"Wrong" Wright",
+  { id: "bm-craig", name: "Craig \"Wrong\" Wright",
     cryptography:0, distributedSystems:0, economics:1, coding:0, writing:1, community:3 },
 ];
 
