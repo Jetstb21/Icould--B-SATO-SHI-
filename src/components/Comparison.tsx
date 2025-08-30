@@ -45,9 +45,22 @@ export default function Comparison() {
       const { data } = await supabase.from("profiles").select("*");
       if (data) setUsers(data as Row[]);
     })();
+    
+    // Check for hash-based routing first
     const fromHash = readCodeFromHash();
     if (fromHash.length) setSelected(fromHash);
     else setSelected(readSharedIds());
+  }, []);
+
+  // Listen for hash changes to update selection
+  useEffect(() => {
+    function handleHashChange() {
+      const fromHash = readCodeFromHash();
+      if (fromHash.length) setSelected(fromHash);
+    }
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const allOptions = useMemo(() => [...BENCHMARKS, ...users], [users]);

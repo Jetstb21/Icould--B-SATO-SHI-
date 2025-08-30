@@ -22,15 +22,27 @@ export function fromCompareCode(code: string): string[] {
 }
 
 export function buildShortLink(ids: string[]): string {
-  const url = new URL(window.location.href);
-  url.hash = `#${ids.join(",")}`;
-  url.search = ""; // clear query params for shorter URL
+  const code = btoa(ids.join(","));
+  const url = new URL(window.location.origin);
+  url.hash = `#/c/${code}`;
   return url.toString();
 }
 
 export function readCodeFromHash(): string[] {
-  const hash = window.location.hash.slice(1); // remove #
-  return hash ? hash.split(",").filter(Boolean) : [];
+  const hash = window.location.hash;
+  // Check for new format: #/c/abc123
+  const match = hash.match(/^#\/c\/(.+)$/);
+  if (match) {
+    try {
+      const decoded = atob(match[1]);
+      return decoded.split(",").filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+  // Fallback to old format: #id1,id2,id3
+  const oldFormat = hash.slice(1);
+  return oldFormat ? oldFormat.split(",").filter(Boolean) : [];
 }
 
 // Original score sharing utilities
