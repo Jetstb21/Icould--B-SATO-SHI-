@@ -4,6 +4,7 @@ import {
   Radar, Legend, Tooltip, ResponsiveContainer
 } from "recharts";
 import { supabase } from "@/lib/supabase";
+import { buildShareUrl, readSharedIds } from "@/lib/shareComparison";
 
 const METRICS = ["cryptography","distributedSystems","economics","coding","writing","community"] as const;
 type Metric = typeof METRICS[number];
@@ -32,12 +33,21 @@ const palette = ["#82ca9d","#8884d8","#ffc658","#ff7f7f","#8dd1e1","#a4de6c","#d
 export default function Comparison() {
   const [users, setUsers] = useState<Row[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.from("profiles").select("*");
       if (!error && data) setUsers(data as Row[]);
     })();
+  }, []);
+
+  // Load shared selection from URL on mount
+  useEffect(() => {
+    const sharedIds = readSharedIds();
+    if (sharedIds.length > 0) {
+      setSelected(sharedIds.slice(0, 3)); // respect max 3 limit
+    }
   }, []);
 
   const allOptions = useMemo(() => [...BENCHMARKS, ...users], [users]);
@@ -55,6 +65,25 @@ export default function Comparison() {
 
   const toggle = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter(x => x !== id) : [...s, id].slice(-3))); // max 3
+
+  const shareComparison = async () => {
+    const shareUrl = buildShareUrl(selected);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = shareUrl;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
@@ -85,6 +114,18 @@ export default function Comparison() {
           </div>
         </div>
       </div>
+
+      {/* Share button */}
+      {selected.length > 0 && (
+        <div className="mb-4 flex justify-center">
+          <button
+            onClick={shareComparison}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {copied ? "Link Copied!" : "Share This Comparison"}
+          </button>
+        </div>
+      )}
 
       {/* Chart */}
       <div className="w-full h-[440px] rounded-2xl shadow p-3 bg-white">
