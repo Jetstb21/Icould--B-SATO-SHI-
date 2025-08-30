@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
-import CategoryCard from "@/components/CategoryCard";
+import { useEffect, useState, useMemo } from "react";
 import RatingModal from "@/components/RatingModal";
 import { getScores, setScore } from "@/lib/storage";
+import CategoryCard from "@/components/CategoryCard";
+import RadarChart from "@/components/RadarChart";
 
 type Category = {
   title: string;
@@ -22,11 +23,24 @@ export default function CategoriesGrid({ categories }: { categories: Category[] 
     setOpen(true);
   }
 
-  function onSave(score: number) {
+  function onSave(val: number) {
     if (!active) return;
-    setScore(active, score);
-    setScores((s) => ({ ...s, [active]: score }));
+    setScore(active, val);
+    setScores((s) => ({ ...s, [active]: val }));
   }
+
+  const labels = useMemo(() => categories.map(c => c.title), [categories]);
+  const values = useMemo(
+    () => labels.map(l => scores[l] ?? 0),
+    [labels, scores]
+  );
+
+  const avg = useMemo(() => {
+    const arr = values;
+    if (!arr.length) return 0;
+    const sum = arr.reduce((a, b) => a + (b || 0), 0);
+    return +(sum / arr.length).toFixed(2);
+  }, [values]);
 
   return (
     <>
@@ -41,6 +55,14 @@ export default function CategoriesGrid({ categories }: { categories: Category[] 
             onAssess={onAssess}
           />
         ))}
+      </div>
+
+      <div className="mt-10 flex flex-col items-center gap-4">
+        <h2 className="text-xl font-bold">Your Profile</h2>
+        <p className="text-sm text-white/70">
+          Average score: <span className="font-semibold">{avg}</span> / 5
+        </p>
+        <RadarChart labels={labels} values={values} size={380} />
       </div>
 
       <RatingModal
