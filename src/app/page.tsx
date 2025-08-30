@@ -1,4 +1,4 @@
-import BenchmarkRadar from "./components/BenchmarkRadar";
+import BenchmarkRadar from "../components/BenchmarkRadar";
 
 export default function App() {
   return (
