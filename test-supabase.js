@@ -1,4 +1,10 @@
-import { supabase } from './src/lib/supabase.js'
+import { createClient } from '@supabase/supabase-js'
+import 'dotenv/config'
+
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL,
+  process.env.VITE_SUPABASE_ANON_KEY
+)
 
 async function testSupabaseConnection() {
   console.log('🔍 Testing Supabase connection...\n');
