@@ -48,6 +48,28 @@ const loadUsersLS = () => {
 };
 const saveUsersLS = (u) => { try { localStorage.setItem(LS_KEY, JSON.stringify(u)); } catch {} };
 
+/* ===== Custom Tooltip ===== */
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: c.cardBg, color: c.text, border: `1px solid ${c.border}`,
+      borderRadius: 8, padding: "8px 10px", boxShadow: c.shadow, minWidth: 180
+    }}>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>{label}</div>
+      {payload.map((p) => {
+        const color = BENCHMARK_COLORS[p.name] || p.color;
+        return (
+          <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span style={{ width: 10, height: 10, background: color, borderRadius: 2, display: "inline-block" }} />
+            <span>{p.name}: <b>{p.value}</b></span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /* ===== Component ===== */
 export default function App() {
   const [dark, setDark] = useState(false);
@@ -195,7 +217,7 @@ export default function App() {
               const s = radarStyle(u, i, true);
               return <Radar key={u} name={u} dataKey={u} {...s} />;
             })}
-            <Tooltip />
+            <Tooltip content={<CustomTooltip />} />
             <Legend content={<CustomLegend selected={selected} onSelect={setSelected} />} />
           </RadarChart>
         </ResponsiveContainer>
