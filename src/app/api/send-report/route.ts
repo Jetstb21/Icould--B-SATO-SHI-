@@ -1,35 +1,42 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,  // or use service role on server if you have it
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! // safe for quick demo; swap to service key later
+);
 
 export async function POST(req: Request) {
   try {
-    const { to, name, reportUrl } = await req.json();
+    const { to, name, reportUrl, profileId } = await req.json();
     if (!to || !reportUrl) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
+    // send via Resend
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         from: "Reports <reports@yourdomain.com>",
         to: [to],
-        subject: `Your Satoshi Comparison Report`,
-        html: `
-          <h2>Hi ${name || "there"},</h2>
-          <p>Your report is ready.</p>
-          <p><a href="${reportUrl}">Download / View your PDF</a></p>
-          <p>Keep hacking,<br/>Could I Be Satoshi?</p>
-        `,
+        subject: "Your Satoshi Comparison Report",
+        html: `<p>Hi ${name || "there"}, your report is ready: <a href="${reportUrl}">Open PDF</a></p>`,
       }),
     });
+    if (!res.ok) return NextResponse.json({ error: await res.text() }, { status: 500 });
 
-    if (!res.ok) {
-      const t = await res.text();
-      return NextResponse.json({ error: t }, { status: 500 });
-    }
+    // log to Supabase
+    await supabase.from("emails_sent").insert({
+      to_email: to,
+      name,
+      report_url: reportUrl,
+      profile_id: profileId ?? null,
+    });
+
     return NextResponse.json({ ok: true });
-  } catch (e:any) {
+  } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Error" }, { status: 500 });
   }
 }
