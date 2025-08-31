@@ -1,28 +1,20 @@
-import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv'
+dotenv.config({ path: '.env.local' })  // load Vite env for Node
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from './src/lib/supabase.node.js'
 
 async function testConnection() {
   console.log('🔍 Testing Supabase connection...\n');
   
   try {
-    // Test profiles table (should work - public read access)
-    console.log('1️⃣ Testing profiles table...');
+    // Test submissions table
+    console.log('1️⃣ Testing submissions table...');
     const { data, error } = await supabase
-      .from('profiles')
+      .from('submissions')
       .select('*')
       .limit(1);
     
-    console.log('Result:', { data, error });
-    
-    if (error) {
-      console.log('\n❌ Error occurred:', error.message);
-    } else {
-      console.log('\n✅ Connection successful!');
-    }
+    console.log({ error: profilesError, data: profiles });
     
   } catch (err) {
     console.error('❌ Test failed:', err);
