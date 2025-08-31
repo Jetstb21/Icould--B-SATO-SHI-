@@ -1,16 +1,22 @@
 "use client";
-
 import React, { useEffect, useMemo, useState } from "react";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   Radar, Legend, Tooltip, ResponsiveContainer
 } from "recharts";
+import { createClient } from "@supabase/supabase-js";
 
-/* ========= Config ========= */
-const METRICS = ["Cryptography","Coding","Vision","Impact","Credibility"] as const;
-type Metric = typeof METRICS[number];
+/* ===== Supabase ===== */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = (supabaseUrl && supabaseAnon)
+  ? createClient(supabaseUrl, supabaseAnon)
+  : null;
 
-const BENCHMARKS: Record<string, Record<Metric, number>> = {
+/* ===== Config ===== */
+const METRICS = ["Cryptography","Coding","Vision","Impact","Credibility"];
+
+const BENCHMARKS = {
   "Satoshi":                { Cryptography:10, Coding:10, Vision:10, Impact:10, Credibility:10 },
   "Hal Finney":             { Cryptography: 9, Coding:10, Vision: 8, Impact: 9, Credibility:10 },
   "Wei Dai":                { Cryptography: 8, Coding: 6, Vision: 9, Impact: 7, Credibility: 9 },
@@ -19,39 +25,30 @@ const BENCHMARKS: Record<string, Record<Metric, number>> = {
 };
 
 const PALETTE = ["#8884d8","#82ca9d","#ffc658","#ff7f7f","#8dd1e1","#a4de6c","#d0ed57"];
-
-/* ========= Helpers ========= */
-type UserMap = Record<string, Record<Metric, number>>;
-
 const LS_KEY = "radar_submissions_v1";
 
-function toRadarRows(source: Record<string, Record<Metric, number>>) {
+/* ===== Helpers ===== */
+function toRadarRows(source) {
   return METRICS.map((metric) => {
-    const row: any = { metric };
+    const row = { metric };
     Object.entries(source).forEach(([name, vals]) => (row[name] = vals[metric]));
     return row;
   });
 }
+const loadUsersLS = () => {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { return {}; }
+};
+const saveUsersLS = (u) => { try { localStorage.setItem(LS_KEY, JSON.stringify(u)); } catch {} };
 
-function loadUsers(): UserMap {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
-}
-
-function saveUsers(users: UserMap) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(users)); } catch {}
-}
-
-/* ========= App ========= */
+/* ===== Component ===== */
 export default function App() {
   const [dark, setDark] = useState(false);
-  const [users, setUsers] = useState<UserMap>({});
+  const [users, setUsers] = useState({});
   const [name, setName] = useState("");
-  const [scores, setScores] = useState<Record<Metric, number>>(
-    Object.fromEntries(METRICS.map(m => [m, 5])) as Record<Metric, number>
+  const [scores, setScores] = useState(
+    Object.fromEntries(METRICS.map(m => [m, 5]))
   );
+  const [leaderboard, setLeaderboard] = useState([]);
 
   const c = {
     appBg:    dark ? "#0b0b0e" : "#f7f7f7",
@@ -67,113 +64,178 @@ export default function App() {
     inputText:dark ? "#f5f5f5" : "#111",
   };
 
-  // load/save localStorage
-  useEffect(() => { setUsers(loadUsers()); }, []);
-  useEffect(() => { saveUsers(users); }, [users]);
+  // load users
+  useEffect(() => {
+    (async () => {
+      if (supabase) {
+        const { data, error } = await supabase.from("submissions").select("*").order("created_at",{ascending:true});
+        if (!error && data) {
+          const mapped = {};
+          data.forEach(s => {
+            mapped[s.name] = {
+              Cryptography: s.cryptography,
+              Coding: s.coding,
+              Vision: s.vision,
+              Impact: s.impact,
+              Credibility: s.credibility
+            };
+          });
+          setUsers(mapped);
+          return;
+        }
+      }
+      setUsers(loadUsersLS());
+    })();
+  }, []);
+
+  // refresh leaderboard
+  useEffect(() => {
+    if (!supabase) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("leaderboard")
+        .select("id,name,avg_score,distance_to_satoshi")
+        .limit(10);
+      if (!error && data) setLeaderboard(data);
+    })();
+  }, [users]);
+
+  useEffect(() => { if (!supabase) saveUsersLS(users); }, [users]);
 
   const allSeries = useMemo(() => ({ ...BENCHMARKS, ...users }), [users]);
   const data = useMemo(() => toRadarRows(allSeries), [allSeries]);
 
-  const addUser = (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const n = name.trim();
     if (!n) return;
+
+    if (supabase) {
+      await supabase.from("submissions").insert({
+        name: n,
+        cryptography: scores.Cryptography,
+        coding: scores.Coding,
+        vision: scores.Vision,
+        impact: scores.Impact,
+        credibility: scores.Credibility,
+      });
+      setName("");
+      return;
+    }
     setUsers(prev => ({ ...prev, [n]: { ...scores } }));
     setName("");
   };
 
   const clearUsers = () => {
     setUsers({});
-    localStorage.removeItem(LS_KEY);
+    if (!supabase) localStorage.removeItem(LS_KEY);
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: c.appBg, color: c.text, padding: 20, fontFamily: "system-ui" }}>
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Bitcoin Developer Radar</h1>
-          <button onClick={() => setDark(!dark)}
-            style={{
-              height:40, padding:"0 16px", borderRadius:10, border:"none",
-              background: c.btnBg, color: c.btnText, fontWeight:700, cursor:"pointer"
-            }}
-          >
-            {dark ? "Light mode" : "Dark mode"}
+    <div style={{ padding:24, maxWidth:1100, margin:"0 auto",
+                  fontFamily:"system-ui, Arial", background:c.appBg, color:c.text }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <h1 style={{ fontSize:24, fontWeight:700, marginBottom:8 }}>
+          Could I Be Satoshi? — Radar Compare
+        </h1>
+        <button onClick={()=>setDark(d=>!d)}
+          style={{ padding:"8px 12px", borderRadius:10, border:`1px solid ${c.border}`,
+                   background:c.btn2Bg, color:c.btn2Text, cursor:"pointer" }}>
+          {dark ? "Light mode" : "Dark mode"}
+        </button>
+      </div>
+      <p style={{ marginBottom:16, opacity:0.85 }}>
+        Benchmarks included: Satoshi, Hal Finney, Wei Dai, Gavin Andresen, Craig "Wrong" Wright.
+        Add yourself below to compare on the same chart (0–10).
+      </p>
+
+      {/* Chart */}
+      <div style={{
+        width:"100%", height:440, background:c.cardBg, borderRadius:16,
+        boxShadow:c.shadow, padding:12, marginBottom:18, border:`1px solid ${c.border}`
+      }}>
+        <ResponsiveContainer>
+          <RadarChart data={data}>
+            <PolarGrid />
+            <PolarAngleAxis dataKey="metric" />
+            <PolarRadiusAxis angle={90} domain={[0, 10]} />
+            {Object.keys(BENCHMARKS).map((n) => (
+              <Radar key={n} name={n} dataKey={n} stroke="#444" fill="#444" fillOpacity={0.08} />
+            ))}
+            {Object.keys(users).map((u,i) => (
+              <Radar key={u} name={u} dataKey={u}
+                stroke={PALETTE[i % PALETTE.length]}
+                fill={PALETTE[i % PALETTE.length]}
+                fillOpacity={0.35} />
+            ))}
+            <Tooltip /><Legend />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit}
+        style={{ display:"grid", gridTemplateColumns:"1.2fr repeat(5,1fr) auto", gap:12, alignItems:"end" }}>
+        <div>
+          <label style={{ fontSize:12, fontWeight:600 }}>Display name</label>
+          <input placeholder="e.g., Alice" value={name}
+            onChange={e=>setName(e.target.value)}
+            style={{ width:"100%", border:`1px solid ${c.border}`, borderRadius:10,
+                     padding:"10px 12px", background:c.inputBg, color:c.inputText }}/>
+        </div>
+        {METRICS.map((m) => (
+          <div key={m}>
+            <label style={{ fontSize:12, fontWeight:600 }}>{m} (0–10)</label>
+            <input type="number" min={0} max={10}
+              value={scores[m]}
+              onChange={e=>setScores(s=>({...s,[m]:Math.max(0,Math.min(10,Number(e.target.value)))}))}
+              style={{ width:"100%", border:`1px solid ${c.border}`, borderRadius:10,
+                       padding:"10px 12px", background:c.inputBg, color:c.inputText }}/>
+          </div>
+        ))}
+        <button type="submit"
+          style={{ height:40, padding:"0 16px", borderRadius:10, border:"none",
+                   background:c.btnBg, color:c.btnText, fontWeight:700, cursor:"pointer" }}>
+          Add
+        </button>
+      </form>
+
+      {!supabase && (
+        <div style={{ marginTop:12, display:"flex", gap:8 }}>
+          <button onClick={clearUsers}
+            style={{ padding:"8px 12px", borderRadius:10, border:`1px solid ${c.border}`,
+                     background:c.btn2Bg, color:c.btn2Text, cursor:"pointer" }}>
+            Clear user overlays (local)
           </button>
         </div>
-        <p style={{ marginBottom: 16, opacity: 0.85 }}>
-          Benchmarks included: Satoshi, Hal Finney, Wei Dai, Gavin Andresen, Craig "Wrong" Wright.
-          Add yourself below to compare on the same chart (0–10).
-        </p>
+      )}
 
-        {/* Chart */}
-        <div style={{ width: "100%", height: 440, background: c.cardBg, borderRadius: 16, boxShadow: c.shadow, padding: 12, marginBottom: 18 }}>
-          <ResponsiveContainer>
-            <RadarChart data={data}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="metric" />
-              <PolarRadiusAxis angle={90} domain={[0, 10]} />
-              {/* Benchmarks (subtle gray) */}
-              {Object.keys(BENCHMARKS).map((n) => (
-                <Radar key={n} name={n} dataKey={n} stroke="#444" fill="#444" fillOpacity={0.08} />
-              ))}
-              {/* Users (colorful overlays) */}
-              {Object.keys(users).map((u, i) => (
-                <Radar
-                  key={u}
-                  name={u}
-                  dataKey={u}
-                  stroke={PALETTE[i % PALETTE.length]}
-                  fill={PALETTE[i % PALETTE.length]}
-                  fillOpacity={0.35}
-                />
-              ))}
-              <Tooltip />
-              <Legend />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Form */}
-        <div style={{ background: c.cardBg, borderRadius: 16, boxShadow: c.shadow, padding: 20 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Add Yourself</h2>
-          <form onSubmit={addUser} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600 }}>Name</label>
-              <input
-                placeholder="e.g., Alice"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={{
-                  width:"100%", border:`1px solid ${c.border}`, borderRadius:10,
-                  padding:"10px 12px", background: c.inputBg, color: c.inputText
-                }}
-              />
-            </div>
-            {METRICS.map((m) => (
-              <div key={m}>
-                <label style={{ fontSize: 12, fontWeight: 600 }}>{m} (0–10)</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  value={scores[m]}
-                  onChange={(e) => setScores(prev => ({ ...prev, [m]: +e.target.value }))}
-                  style={{ width: "100%" }}
-                />
-                <span style={{ fontSize: 12, opacity: 0.7 }}>{scores[m]}</span>
-              </div>
+      {/* Leaderboard */}
+      <h2 style={{ fontSize:20, fontWeight:700, marginTop:32, marginBottom:12 }}>
+        Leaderboard (Top 10 Closest to Satoshi)
+      </h2>
+      <div style={{ color: c.text }}>
+        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <thead>
+            <tr style={{ textAlign:"left", borderBottom:`2px solid ${c.text}` }}>
+              <th style={{ padding:8 }}>Name</th>
+              <th>Avg Score</th>
+              <th>Distance to Satoshi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leaderboard.map((row) => (
+              <tr key={row.id} style={{ borderBottom:`1px solid ${c.border}` }}>
+                <td style={{ padding:8 }}>{row.name}</td>
+                <td>{row.avg_score.toFixed(2)}</td>
+                <td>{row.distance_to_satoshi.toFixed(2)}</td>
+              </tr>
             ))}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button type="submit" style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: c.btnBg, color: c.btnText, cursor: "pointer" }}>
-                Add
-              </button>
-              <button type="button" onClick={clearUsers} style={{ padding: "10px 16px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.btn2Bg, color: c.btn2Text, cursor: "pointer" }}>
-                Clear All
-              </button>
-            </div>
-          </form>
-        </div>
+            {leaderboard.length === 0 && (
+              <tr><td colSpan={3} style={{ padding:8, opacity:0.7 }}>No entries yet.</td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
