@@ -105,7 +105,10 @@ export default function App() {
       </p>
 
       {/* Chart */}
-      <div style={{ width: "100%", height: 440, background: c.cardBg, borderRadius: 16, boxShadow: c.shadow, padding: 12, marginBottom: 18 }}>
+      <div style={{
+        width:"100%", height:440, background: c.cardBg, borderRadius:16,
+        boxShadow: c.shadow, padding:12, marginBottom:18, border:`1px solid ${c.border}`
+      }}>
         <ResponsiveContainer>
           <RadarChart data={data}>
             <PolarGrid />
