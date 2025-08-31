@@ -5,6 +5,7 @@ import {
   Radar, Legend, Tooltip, ResponsiveContainer
 } from "recharts";
 import { createClient } from "@supabase/supabase-js";
+import CustomLegend from "@/components/CustomLegend";
 
 /* ===== Supabase ===== */
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -195,10 +196,7 @@ export default function App() {
               return <Radar key={u} name={u} dataKey={u} {...s} />;
             })}
             <Tooltip />
-            <Legend 
-              onClick={(e) => setSelected(selected === e.value ? null : e.value)}
-              wrapperStyle={{ cursor: "pointer" }}
-            />
+            <Legend content={<CustomLegend selected={selected} onSelect={setSelected} />} />
           </RadarChart>
         </ResponsiveContainer>
       </div>
