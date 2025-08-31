@@ -49,6 +49,20 @@ export default function App() {
     Object.fromEntries(METRICS.map(m => [m, 5]))
   );
   const [leaderboard, setLeaderboard] = useState([]);
+  const [selected, setSelected] = useState(null);
+
+  function radarStyle(name, i, isUser) {
+    const active = selected === name || selected === null; // show all if none selected
+    const baseStroke = isUser ? PALETTE[i % PALETTE.length] : "#444";
+    const baseFill = isUser ? PALETTE[i % PALETTE.length] : "#444";
+    return {
+      stroke: baseStroke,
+      fill: baseFill,
+      fillOpacity: active ? (isUser ? 0.35 : 0.10) : 0.04,
+      strokeOpacity: active ? 1 : 0.25,
+      strokeWidth: active ? 3 : 1,
+    };
+  }
 
   const c = {
     appBg:    dark ? "#0b0b0e" : "#f7f7f7",
@@ -159,16 +173,23 @@ export default function App() {
             <PolarGrid />
             <PolarAngleAxis dataKey="metric" />
             <PolarRadiusAxis angle={90} domain={[0, 10]} />
-            {Object.keys(BENCHMARKS).map((n) => (
-              <Radar key={n} name={n} dataKey={n} stroke="#444" fill="#444" fillOpacity={0.08} />
+            {Object.keys(BENCHMARKS).map((n, i) => {
+              const style = radarStyle(n, i, false);
+              return (
+                <Radar key={n} name={n} dataKey={n} {...style} />
+              );
             ))}
-            {Object.keys(users).map((u,i) => (
-              <Radar key={u} name={u} dataKey={u}
-                stroke={PALETTE[i % PALETTE.length]}
-                fill={PALETTE[i % PALETTE.length]}
-                fillOpacity={0.35} />
+            {Object.keys(users).map((u, i) => {
+              const style = radarStyle(u, i, true);
+              return (
+                <Radar key={u} name={u} dataKey={u} {...style} />
+              );
             ))}
-            <Tooltip /><Legend />
+            <Tooltip />
+            <Legend 
+              onClick={(e) => setSelected(selected === e.value ? null : e.value)}
+              wrapperStyle={{ cursor: "pointer" }}
+            />
           </RadarChart>
         </ResponsiveContainer>
       </div>
