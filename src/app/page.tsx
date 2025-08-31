@@ -80,6 +80,13 @@ export default function App() {
   );
   const [leaderboard, setLeaderboard] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [checks, setChecks] = useState(
+    Object.fromEntries(METRICS.map(m => [m, Array(10).fill(false)]))
+  );
+
+  const scoreFromChecks = (checkArray) => {
+    return checkArray.filter(Boolean).length;
+  };
 
   function radarStyle(name, i, isUser) {
     const active = selected === name || selected === null; // show all if none selected
@@ -224,6 +231,45 @@ export default function App() {
       </div>
 
       {/* Form */}
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>
+          Rate Your Skills (Click boxes to fill up to that level)
+        </h3>
+        <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+          {METRICS.map((m) => (
+            <div key={m} style={{ marginBottom:16 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                <strong>{m}</strong>
+                <span>Score: {scoreFromChecks(checks[m])}/10</span>
+              </div>
+              <div style={{ display:"flex", gap:6 }}>
+                {Array.from({ length: 10 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    onClick={()=>{
+                      setChecks(prev=>{
+                        const copy = {...prev};
+                        // fill up to idx inclusive
+                        copy[m] = Array(10).fill(false).map((_,i)=>i<=idx);
+                        return copy;
+                      });
+                    }}
+                    style={{
+                      width:24, height:24,
+                      border:`1px solid ${c.border}`,
+                      borderRadius:4,
+                      background: checks[m][idx] ? c.btnBg : c.inputBg,
+                      cursor:"pointer"
+                    }}
+                    title={`Level ${idx+1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit}
         style={{ display:"grid", gridTemplateColumns:"1.2fr repeat(5,1fr) auto", gap:12, alignItems:"end" }}>
         <div>
