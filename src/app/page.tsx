@@ -324,6 +324,22 @@ export default function Page() {
                     />
                   ))}
                 </div>
+                <div style={{ marginTop: 6, fontSize: 12, opacity: 0.9 }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(5, minmax(0,1fr))", gap: 6 }}>
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div key={i} style={{
+                        display:"flex", alignItems:"center", gap:6, padding:"4px 6px",
+                        border:`1px solid ${c.border}`, borderRadius:6, background:c.cardBg
+                      }}>
+                        <span style={{
+                          display:"inline-block", width:14, height:14, borderRadius:3,
+                          background: levelColor(i), border:`1px solid ${c.border}`
+                        }}/>
+                        <span><b>{i+1}</b> — {LEVEL_LABELS[m]?.[i] ?? "—"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             );
           })}
