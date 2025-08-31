@@ -178,13 +178,13 @@ export default function App() {
               return (
                 <Radar key={n} name={n} dataKey={n} {...style} />
               );
-            ))}
+            })}
             {Object.keys(users).map((u, i) => {
               const style = radarStyle(u, i, true);
               return (
                 <Radar key={u} name={u} dataKey={u} {...style} />
               );
-            ))}
+            })}
             <Tooltip />
             <Legend 
               onClick={(e) => setSelected(selected === e.value ? null : e.value)}
