@@ -180,10 +180,16 @@ export default function App() {
             <PolarGrid />
             <PolarAngleAxis dataKey="metric" />
             <PolarRadiusAxis angle={90} domain={[0, 10]} />
-            {Object.keys(BENCHMARKS).map((n, i) => {
-              const s = radarStyle(n, i, false);
-              return <Radar key={n} name={n} dataKey={n} {...s} />;
-            })}
+            {Object.keys(BENCHMARKS).map((n) => (
+              <Radar
+                key={n}
+                name={n}
+                dataKey={n}
+                stroke={BENCHMARK_COLORS[n] || "#444"}
+                fill={BENCHMARK_COLORS[n] || "#444"}
+                fillOpacity={0.08}
+              />
+            ))}
             {Object.keys(users).map((u, i) => {
               const s = radarStyle(u, i, true);
               return <Radar key={u} name={u} dataKey={u} {...s} />;
