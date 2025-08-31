@@ -105,6 +105,20 @@ export default function ProfilePage() {
             Download PDF Checklist
           </button>
           <button
+            onClick={async () => {
+              await supabase.from("profiles").update({
+                published: !row.published,
+              }).eq("id", row.id);
+
+              alert(`Profile is now ${!row.published ? "published" : "unpublished"}`);
+              // Refresh the page to show updated state
+              window.location.reload();
+            }}
+            className="px-3 py-2 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+          >
+            {row.published ? "Unpublish Profile" : "Publish Profile"}
+          </button>
+          <button
             onClick={copyCompareShortLink}
             className="px-3 py-2 rounded bg-black text-white hover:bg-gray-800 transition-colors"
             title="Copies a short link to compare this profile with selected benchmarks"
