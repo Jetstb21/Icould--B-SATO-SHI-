@@ -88,119 +88,92 @@ export default function App() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: c.appBg,
-      color: c.text,
-      padding: "20px",
-      fontFamily: "system-ui, -apple-system, sans-serif"
-    }}>
+    <div style={{ minHeight: "100vh", background: c.appBg, color: c.text, padding: 20, fontFamily: "system-ui" }}>
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Bitcoin Developer Radar</h1>
-          <button
-            onClick={() => setDark(!dark)}
+          <button onClick={() => setDark(!dark)}
             style={{
-              padding:"8px 12px", borderRadius:10, border:`1px solid ${c.border}`,
-              background: c.btn2Bg, color: c.btn2Text, cursor:"pointer"
+              height:40, padding:"0 16px", borderRadius:10, border:"none",
+              background: c.btnBg, color: c.btnText, fontWeight:700, cursor:"pointer"
             }}
           >
-            {dark ? "☀️" : "🌙"}
+            {dark ? "Light mode" : "Dark mode"}
           </button>
         </div>
-        <button onClick={clearUsers} style={{
-          padding:"8px 12px", borderRadius:10, border:`1px solid ${c.border}`,
-          background: c.btn2Bg, color: c.btn2Text, cursor:"pointer"
-        }}>
-          Clear user overlays (local)
-        </button>
-      </div>
-      <p style={{ marginBottom: 16, opacity: 0.85 }}>
-        Benchmarks included: Satoshi, Hal Finney, Wei Dai, Gavin Andresen, Craig "Wrong" Wright.
-        Add yourself below to compare on the same chart (0–10).
-      </p>
+        <p style={{ marginBottom: 16, opacity: 0.85 }}>
+          Benchmarks included: Satoshi, Hal Finney, Wei Dai, Gavin Andresen, Craig "Wrong" Wright.
+          Add yourself below to compare on the same chart (0–10).
+        </p>
 
-      {/* Chart */}
-      <div style={{
-        width:"100%", height:440, background: c.cardBg, borderRadius:16,
-        boxShadow: c.shadow, padding:12, marginBottom:18, border:`1px solid ${c.border}`
-      }}>
-        <ResponsiveContainer>
-          <RadarChart data={data}>
-            <PolarGrid />
-            <PolarAngleAxis dataKey="metric" />
-            <PolarRadiusAxis angle={90} domain={[0, 10]} />
-            {/* Benchmarks (subtle gray) */}
-            {Object.keys(BENCHMARKS).map((n) => (
-              <Radar key={n} name={n} dataKey={n} stroke="#444" fill="#444" fillOpacity={0.08} />
-            ))}
-            {/* Users (colorful overlays) */}
-            {Object.keys(users).map((u, i) => (
-              <Radar
-                key={u}
-                name={u}
-                dataKey={u}
-                stroke={PALETTE[i % PALETTE.length]}
-                fill={PALETTE[i % PALETTE.length]}
-                fillOpacity={0.35}
-              />
-            ))}
-            <Tooltip />
-            <Legend />
-          </RadarChart>
-        </ResponsiveContainer>
-      </div>
+        {/* Chart */}
+        <div style={{ width: "100%", height: 440, background: c.cardBg, borderRadius: 16, boxShadow: c.shadow, padding: 12, marginBottom: 18 }}>
+          <ResponsiveContainer>
+            <RadarChart data={data}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey="metric" />
+              <PolarRadiusAxis angle={90} domain={[0, 10]} />
+              {/* Benchmarks (subtle gray) */}
+              {Object.keys(BENCHMARKS).map((n) => (
+                <Radar key={n} name={n} dataKey={n} stroke="#444" fill="#444" fillOpacity={0.08} />
+              ))}
+              {/* Users (colorful overlays) */}
+              {Object.keys(users).map((u, i) => (
+                <Radar
+                  key={u}
+                  name={u}
+                  dataKey={u}
+                  stroke={PALETTE[i % PALETTE.length]}
+                  fill={PALETTE[i % PALETTE.length]}
+                  fillOpacity={0.35}
+                />
+              ))}
+              <Tooltip />
+              <Legend />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
 
-      {/* Form */}
-      <div style={{ background: c.cardBg, borderRadius: 16, boxShadow: c.shadow, padding: 20, border: `1px solid ${c.border}` }}>
-        <h3 style={{ marginBottom: 16, fontSize: 18, fontWeight: 600 }}>Add Yourself</h3>
-        <form onSubmit={addUser} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, display: "block" }}>Name</label>
-            <input
-              placeholder="e.g., Alice"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{ width: "100%", border: `1px solid ${c.border}`, borderRadius: 10, padding: "10px 12px", background: c.inputBg, color: c.inputText }}
-            />
-          </div>
-          {METRICS.map((m) => (
-            <div key={m}>
-              <label style={{ fontSize: 12, fontWeight: 600 }}>{m} (0–10)</label>
+        {/* Form */}
+        <div style={{ background: c.cardBg, borderRadius: 16, boxShadow: c.shadow, padding: 20 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Add Yourself</h2>
+          <form onSubmit={addUser} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600 }}>Name</label>
               <input
-                type="range"
-                min="0"
-                max="10"
-                value={scores[m]}
-                onChange={(e) => setScores(prev => ({ ...prev, [m]: +e.target.value }))}
-                style={{ width: "100%" }}
+                placeholder="e.g., Alice"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                style={{
+                  width:"100%", border:`1px solid ${c.border}`, borderRadius:10,
+                  padding:"10px 12px", background: c.inputBg, color: c.inputText
+                }}
               />
-              <span style={{ fontSize: 12, opacity: 0.7 }}>{scores[m]}</span>
             </div>
-          ))}
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button type="submit" style={{ 
-              padding: "10px 16px", 
-              borderRadius: 10, 
-              border: "none", 
-              background: c.btnBg, 
-              color: c.btnText, 
-              cursor: "pointer" 
-            }}>
-              Add Me
-            </button>
-            <button type="button" onClick={clearUsers} style={{ 
-              padding: "8px 12px", 
-              borderRadius: 10, 
-              border: `1px solid ${c.border}`, 
-              background: c.btn2Bg, 
-              color: c.btn2Text,
-              cursor: "pointer"
-            }}>
-              Clear All
-            </button>
-          </div>
-        </form>
+            {METRICS.map((m) => (
+              <div key={m}>
+                <label style={{ fontSize: 12, fontWeight: 600 }}>{m} (0–10)</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  value={scores[m]}
+                  onChange={(e) => setScores(prev => ({ ...prev, [m]: +e.target.value }))}
+                  style={{ width: "100%" }}
+                />
+                <span style={{ fontSize: 12, opacity: 0.7 }}>{scores[m]}</span>
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="submit" style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: c.btnBg, color: c.btnText, cursor: "pointer" }}>
+                Add
+              </button>
+              <button type="button" onClick={clearUsers} style={{ padding: "10px 16px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.btn2Bg, color: c.btn2Text, cursor: "pointer" }}>
+                Clear All
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
