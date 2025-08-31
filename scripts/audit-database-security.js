@@ -102,6 +102,27 @@ async function auditSecurity() {
       console.log('⚠️  Anon access may not be properly restricted');
     }
 
+    // 5. Check storage schema permissions
+    console.log('\n5️⃣ Checking storage schema permissions...');
+    const { data: storageGrants, error: storageError } = await supabase.rpc('sql', {
+      query: `
+        SELECT grantee, privilege_type
+        FROM information_schema.schema_privileges
+        WHERE schema_name='storage' 
+        AND grantee IN ('anon', 'public')
+        ORDER BY grantee, privilege_type;
+      `
+    });
+
+    if (storageError) {
+      console.error('❌ Error checking storage permissions:', storageError.message);
+    } else if (!storageGrants || storageGrants.length === 0) {
+      console.log('✅ No storage permissions granted to anon/public');
+    } else {
+      console.log('⚠️  Found storage permissions for anon/public:');
+      storageGrants.forEach(g => console.log(`   ${g.grantee}: ${g.privilege_type}`));
+    }
+
     console.log('\n🎉 Security audit complete!');
 
   } catch (error) {
