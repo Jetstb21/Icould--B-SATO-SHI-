@@ -263,6 +263,11 @@ export default function App() {
           </tbody>
         </table>
       </div>
+      <button onClick={() => setSelected(null)}
+        style={{ marginTop:12, padding:"6px 10px", border:`1px solid ${c.border}`, borderRadius:10,
+                 background:c.btn2Bg, color:c.btn2Text, cursor:"pointer" }}>
+        Show all
+      </button>
     </div>
   );
 }
