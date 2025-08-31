@@ -46,11 +46,26 @@ function saveUsers(users: UserMap) {
 
 /* ========= App ========= */
 export default function App() {
+  const [dark, setDark] = useState(false);
   const [users, setUsers] = useState<UserMap>({});
   const [name, setName] = useState("");
   const [scores, setScores] = useState<Record<Metric, number>>(
     Object.fromEntries(METRICS.map(m => [m, 5])) as Record<Metric, number>
   );
+
+  const c = {
+    appBg:    dark ? "#0b0b0e" : "#f7f7f7",
+    text:     dark ? "#f5f5f5" : "#111",
+    cardBg:   dark ? "#15161a" : "#fff",
+    border:   dark ? "#2a2b31" : "#ddd",
+    shadow:   dark ? "0 6px 20px rgba(0,0,0,0.35)" : "0 6px 20px rgba(0,0,0,0.07)",
+    btnBg:    "#111",
+    btnText:  "#fff",
+    btn2Bg:   dark ? "#22252b" : "#f0f0f0",
+    btn2Text: dark ? "#f5f5f5" : "#111",
+    inputBg:  dark ? "#1b1d22" : "#fff",
+    inputText:dark ? "#f5f5f5" : "#111",
+  };
 
   // load/save localStorage
   useEffect(() => { setUsers(loadUsers()); }, []);
@@ -73,15 +88,24 @@ export default function App() {
   };
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto", fontFamily: "system-ui, Arial" }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Could I Be Satoshi? — Radar Compare</h1>
+    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto", fontFamily: "system-ui, Arial", background: c.appBg, color: c.text }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
+          Could I Be Satoshi? — Radar Compare
+        </h1>
+        <button onClick={()=>setDark(d=>!d)}
+          style={{ padding:"8px 12px", borderRadius:10, border:`1px solid ${c.border}`,
+                   background: c.btn2Bg, color: c.btn2Text, cursor:"pointer" }}>
+          {dark ? "Light mode" : "Dark mode"}
+        </button>
+      </div>
       <p style={{ marginBottom: 16, opacity: 0.85 }}>
         Benchmarks included: Satoshi, Hal Finney, Wei Dai, Gavin Andresen, Craig "Wrong" Wright.
         Add yourself below to compare on the same chart (0–10).
       </p>
 
       {/* Chart */}
-      <div style={{ width: "100%", height: 440, background: "#fff", borderRadius: 16, boxShadow: "0 6px 20px rgba(0,0,0,0.07)", padding: 12, marginBottom: 18 }}>
+      <div style={{ width: "100%", height: 440, background: c.cardBg, borderRadius: 16, boxShadow: c.shadow, padding: 12, marginBottom: 18 }}>
         <ResponsiveContainer>
           <RadarChart data={data}>
             <PolarGrid />
@@ -100,47 +124,27 @@ export default function App() {
                 stroke={PALETTE[i % PALETTE.length]}
                 fill={PALETTE[i % PALETTE.length]}
                 fillOpacity={0.35}
-              />
-            ))}
-            <Tooltip />
+            cursor: "pointer"
             <Legend />
-          </RadarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Form */}
-      <form onSubmit={addUser} style={{ display: "grid", gridTemplateColumns: "1.2fr repeat(5, 1fr) auto", gap: 12, alignItems: "end" }}>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 600 }}>Display name</label>
           <input
             placeholder="e.g., Alice"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            style={{ width: "100%", border: "1px solid #ddd", borderRadius: 10, padding: "10px 12px" }}
+            style={{ width: "100%", border: `1px solid ${c.border}`, borderRadius: 10, padding: "10px 12px", background: c.inputBg, color: c.inputText }}
           />
         </div>
         {METRICS.map((m) => (
           <div key={m}>
             <label style={{ fontSize: 12, fontWeight: 600 }}>{m} (0–10)</label>
             <input
-              type="number" min={0} max={10}
-              value={scores[m]}
-              onChange={(e) =>
-                setScores((s) => ({ ...s, [m]: Math.max(0, Math.min(10, Number(e.target.value))) }))
-              }
-              style={{ width: "100%", border: "1px solid #ddd", borderRadius: 10, padding: "10px 12px" }}
+            border: `1px solid ${c.border}`, 
+            background: c.btn2Bg, 
+            color: c.btn2Text,
+            cursor: "pointer"
             />
-          </div>
-        ))}
-        <button type="submit" style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: "#111", color: "#fff", fontWeight: 700 }}>
-          Add
-        </button>
-      </form>
-
-      <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
         <button onClick={clearUsers} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #ddd", background: "#fafafa" }}>
-          Clear user overlays
-        </button>
+            background: c.btnBg, 
+            color: c.btnText, 
       </div>
     </div>
   );
